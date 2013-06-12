@@ -344,7 +344,7 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	}
 	@Override
 	public void onStopTrackingTouch(SeekBar seekBar) {
-		textSeek.setText("Stop tracking touch..");
+		textSeek.setText("Stop tracking touch...");
 		textSeek.setText("Progress set at:" + progressBar);
 	}
 }
