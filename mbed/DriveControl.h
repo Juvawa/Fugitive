@@ -2,7 +2,7 @@
 #define _ROBOTCONTROL_H_
 
 #include "mbed.h"
-
+#include "AndroidAccessory.h"
 
 class DriveControl {
    PwmOut *wheel1,*wheel2,*wheel3;
@@ -12,7 +12,7 @@ class DriveControl {
       void turnleft();
       void turnright();
       void stop();
-      void order(char code);
+      void order(u8 *code);
       
       DriveControl(PwmOut &wheel1,PwmOut &wheel2,PwmOut &wheel3);
 };

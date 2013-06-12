@@ -8,7 +8,7 @@
 PwmOut wheel1(p23);
 PwmOut wheel2(p24);
 PwmOut wheel3(p25);
-
+DriveControl myDrive(wheel1,wheel2,wheel3);
 //AnalogOut blue_top(p27);
 //AnalogOut blue_shared(p28);
 //AnalogOut red_corner(p18);
@@ -122,11 +122,16 @@ void AdkTerm::resetDevice()
 int AdkTerm::callbackRead(u8 *buf, int len)
 {
     pc.printf("%i  %s\n\r\n\n\n",len,buf);
+    led1 = 1;
+    if(len==32) {
+         led2 = 1;
+         myDrive.order(buf);
+    }
     for (int i = 0; i<INBL; i++) {
         buf[i] = 0;
     }
 
-    AttachTick();
+    //AttachTick();
 
     return 0;
 }
@@ -176,32 +181,11 @@ int main()
     AdkTerm.setupDevice();
     printf("Android Development Kit: start\r\n");
     USBInit();
-    /*Create a DriveControl Object
-     *Wheel1 and wheel2 are rear-side wheels, wheel3 is front wheel */
-    DriveControl myDrive(wheel1,wheel2,wheel3);
+    
     while (1) {
     /* Alter RGB LED Light with Potmeters */
     //red_top = Left;
     //blue_top = Right;
-    myDrive.order('F');
-    wait(1);
-    myDrive.order('B');
-    wait(1);
-    myDrive.order('L');
-    wait(1);
-    myDrive.order('R');
-    wait(1);
-    if(Right > 0.5) {
-    led1 = 1;
-    } else {
-    led1 = 0;
-    }
-    if(Left > 0.5) {
-    led2 = 1;
-    } else {
-    led2 = 0;
-    }
-    
         USBLoop();
     }
 }

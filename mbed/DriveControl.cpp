@@ -41,25 +41,20 @@ void DriveControl::stop() {
    wheel3->pulsewidth(0.0);
 }
 
-void DriveControl::order(char code) {
-   switch(code) {
-      case 'F':
+void DriveControl::order(u8 *code) {
+      if(code == (u8*) "MF") {
          forward();
-         break;
-      case 'B':
+      }
+      if(code == (u8*) "MB") {
          backward();
-         break;
-      case 'L':
+      }
+      if(code == (u8*) "ML") {
          turnleft();
-         break;
-      case 'R':
+      }
+      if(code == (u8*) "MR") {
          turnright();
-         break;
-      case 'S':
+      }
+      if(code == (u8*) "MS") {
          stop();
-         break;
-      default:
-         //Wrong Code
-         break;
-   }
+      }
 }
