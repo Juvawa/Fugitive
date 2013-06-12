@@ -16,12 +16,12 @@ DriveControl::DriveControl(PwmOut &wheel1,PwmOut &wheel2,PwmOut &wheel3) {
 
 void DriveControl::forward() {
    wheel1->pulsewidth(0.01);
-   wheel2->pulsewidth(0.01);
+   wheel2->pulsewidth(0.0005);
    wheel3->pulsewidth(0.0000);
 }
 void DriveControl::backward() {
    wheel1->pulsewidth(0.0005);
-   wheel2->pulsewidth(0.0005);
+   wheel2->pulsewidth(0.01);
    wheel3->pulsewidth(0.0000);
 }
 void DriveControl::turnleft() {
@@ -42,19 +42,19 @@ void DriveControl::stop() {
 }
 
 void DriveControl::order(u8 *code) {
-      if(code == (u8*) "MF") {
+      if(!strcmp((char*)code,"MF")) {
          forward();
       }
-      if(code == (u8*) "MB") {
+      else if(!strcmp((char*)code,"MB")) {
          backward();
       }
-      if(code == (u8*) "ML") {
+      else if(!strcmp((char*)code,"ML")) {
          turnleft();
       }
-      if(code == (u8*) "MR") {
+      else if(!strcmp((char*)code,"MR")) {
          turnright();
       }
-      if(code == (u8*) "MS") {
+      else if(!strcmp((char*)code,"MS")) {
          stop();
       }
 }
