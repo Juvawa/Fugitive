@@ -1,113 +1,326 @@
-package com.example.fugetive;
+package com.example.Fugetive;
 
-import android.os.Bundle;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Set;
+
+import android.R.bool;
 import android.app.Activity;
-import android.bluetooth.*;
-import android.content.*;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.ParcelUuid;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.SeekBar.OnSeekBarChangeListener;
-import java.util.ArrayList;
+import android.widget.Toast;
+import android.widget.AdapterView.OnItemClickListener;
 
-
-public class MainActivity extends Activity implements OnSeekBarChangeListener {
-	private SeekBar bar1;		
-	private SeekBar bar2;				
-	private SeekBar bar3;
-	private TextView text1;
-	private TextView text2;
-	private TextView text3;
-	private ArrayList<String> devices = new ArrayList<String>();
-	
-	
-	void print(String s) {
-		System.out.println(s);
-	}
-	
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-    	// Register the BroadcastReceiver
-    	IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-    	this.registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
-    	
+public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeListener{
+    /** Called when the activity is first created. */
+    ListView listViewPaired;
+    ListView listViewDetected;
+    SeekBar seekBar;
+    TextView textSeek;
+    int progressBar;    
+    ArrayList<String> arrayListpaired;
+    ArrayAdapter<String> adapter,detectedAdapter;
+    static HandleSeacrh handleSeacrh;
+    BluetoothDevice bdDevice;
+    BluetoothClass bdClass;
+    ArrayList<BluetoothDevice> arrayListPairedBluetoothDevices;
+    ListItemClickedonPaired listItemClickedonPaired;
+    BluetoothAdapter bluetoothAdapter = null;
+    ArrayList<BluetoothDevice> arrayListBluetoothDevices = null;
+    ListItemClicked listItemClicked;
+    
+    //String buffer for send message
+    private StringBuffer outStringBuffer;
+    
+    @Override 
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        bar1 = (SeekBar)findViewById(R.id.seekBar1); //make seekbar object
-		bar1.setOnSeekBarChangeListener(this); //set seekbar listener
-		bar2 = (SeekBar)findViewById(R.id.seekBar2); //make seekbar object
-		bar2.setOnSeekBarChangeListener(this); //set seekbar listener
-		bar3 = (SeekBar)findViewById(R.id.seekBar3); //make seekbar object
-		bar3.setOnSeekBarChangeListener(this); //set seekbar listener
-		text1 = (TextView)findViewById(R.id.textView1);
-		text2 = (TextView)findViewById(R.id.textView2);
-		text3 = (TextView)findViewById(R.id.textView3);
-
-
         
-        BluetoothAdapter mBluetooth = BluetoothAdapter.getDefaultAdapter();
-        if(mBluetooth == null)
-        	print("BLuetooth is not supported.");
-        if (!mBluetooth.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, 1);
+        listViewDetected = (ListView) findViewById(R.id.listViewDetected);
+        listViewPaired = (ListView) findViewById(R.id.listViewPaired);
+        seekBar = (SeekBar) findViewById(R.id.seekBar1);
+        textSeek = (TextView) findViewById(R.id.textViewSeek);
+        
+        //Initialise outgoing stringbuffer
+        outStringBuffer = new StringBuffer("");
+        
+        arrayListpaired = new ArrayList<String>();
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        handleSeacrh = new HandleSeacrh();
+        arrayListPairedBluetoothDevices = new ArrayList<BluetoothDevice>();
+        /*
+         * the above declaration is just for getting the paired bluetooth devices;
+         * this helps in the removing the bond between paired devices.
+         */
+        listItemClickedonPaired = new ListItemClickedonPaired();
+        arrayListBluetoothDevices = new ArrayList<BluetoothDevice>();
+        adapter= new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, arrayListpaired);
+        detectedAdapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_single_choice);
+        listViewDetected.setAdapter(detectedAdapter);
+        listItemClicked = new ListItemClicked();
+        detectedAdapter.notifyDataSetChanged();
+        listViewPaired.setAdapter(adapter);
+        
+        seekBar.setOnSeekBarChangeListener(this);
+    }
+    @Override
+    protected void onStart() {
+        // TODO Auto-generated method stub
+        super.onStart();
+        onBluetooth();
+        makeDiscoverable();
+        startSearching();
+        getPairedDevices();
+        listViewDetected.setOnItemClickListener(listItemClicked);
+        listViewPaired.setOnItemClickListener(listItemClickedonPaired);
+    }
+    private void getPairedDevices() {
+        Set<BluetoothDevice> pairedDevice = bluetoothAdapter.getBondedDevices();            
+        if(pairedDevice.size()>0)
+        {
+            for(BluetoothDevice device : pairedDevice)
+            {
+                arrayListpaired.add(device.getName()+"\n"+device.getAddress());
+                arrayListPairedBluetoothDevices.add(device);
+            }
         }
-        if(mBluetooth.isEnabled()) {
-        	String mydeviceaddress = mBluetooth.getAddress();
-        	String mydevicename= mBluetooth.getName();
-        	text1.setText(mydevicename + " : " + mydeviceaddress);
+        adapter.notifyDataSetChanged();
+    }
+    class ListItemClicked implements OnItemClickListener
+    {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            // TODO Auto-generated method stub
+            bdDevice = arrayListBluetoothDevices.get(position);
+            //bdClass = arrayListBluetoothDevices.get(position);
+            Log.i("Log", "The dvice : "+bdDevice.toString());
+            /*
+             * here below we can do pairing without calling the callthread(), we can directly call the
+             * connect(). but for the safer side we must usethe threading object.
+             */
+            //callThread();
+            //connect(bdDevice);
+            Boolean isBonded = false;
+            try {
+                isBonded = createBond(bdDevice);
+                if(isBonded)
+                {
+                    //arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
+                    //adapter.notifyDataSetChanged();
+                    getPairedDevices();
+                    adapter.notifyDataSetChanged();
+                }
+            } catch (Exception e) {
+                e.printStackTrace(); 
+            }//connect(bdDevice);
+            Log.i("Log", "The bond is created: "+isBonded);
+        }       
+    }
+    class ListItemClickedonPaired implements OnItemClickListener
+    {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position,long id) {
+            bdDevice = arrayListPairedBluetoothDevices.get(position);
+            try {
+                Boolean removeBonding = removeBond(bdDevice);
+                if(removeBonding)
+                {
+                    arrayListpaired.remove(position);
+                    adapter.notifyDataSetChanged();
+                }
+
+
+                Log.i("Log", "Removed"+removeBonding);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
+    }
+    /*private void callThread() {
+        new Thread(){
+            public void run() {
+                Boolean isBonded = false;
+                try {
+                    isBonded = createBond(bdDevice);
+                    if(isBonded)
+                    {
+                        arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
+                        adapter.notifyDataSetChanged();
+                    }
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace(); 
+                }//connect(bdDevice);
+                Log.i("Log", "The bond is created: "+isBonded);
+            }           
+        }.start();
+    }*/
+    private Boolean connect(BluetoothDevice bdDevice) { 
+        Boolean bool = false;
+        try {
+            Log.i("Log", "service metohd is called ");
+            Class cl = Class.forName("android.bluetooth.BluetoothDevice");
+            Class[] par = {};
+            Method method = cl.getMethod("createBond", par);
+            Object[] args = {};
+            bool = (Boolean) method.invoke(bdDevice);//, args);// this invoke creates the detected devices paired.
+            //Log.i("Log", "This is: "+bool.booleanValue());
+            //Log.i("Log", "devicesss: "+bdDevice.getName());
+        } catch (Exception e) {
+            Log.i("Log", "Inside catch of serviceFromDevice Method");
+            e.printStackTrace();
+        }
+        return bool.booleanValue();
+    };
+
+
+    public boolean removeBond(BluetoothDevice btDevice)  
+    throws Exception  
+    {  
+        Class btClass = Class.forName("android.bluetooth.BluetoothDevice");
+        Method removeBondMethod = btClass.getMethod("removeBond");  
+        Boolean returnValue = (Boolean) removeBondMethod.invoke(btDevice);  
+        return returnValue.booleanValue();  
+    }
+
+
+    public boolean createBond(BluetoothDevice btDevice)  
+    throws Exception  
+    { 
+        Class class1 = Class.forName("android.bluetooth.BluetoothDevice");
+        Method createBondMethod = class1.getMethod("createBond");  
+        Boolean returnValue = (Boolean) createBondMethod.invoke(btDevice);  
+        return returnValue.booleanValue();  
+    }  
+
+    private BroadcastReceiver myReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Message msg = Message.obtain();
+            String action = intent.getAction();
+            if(BluetoothDevice.ACTION_FOUND.equals(action)){
+                Toast.makeText(context, "ACTION_FOUND", Toast.LENGTH_SHORT).show();
+
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                try
+                {
+                    //device.getClass().getMethod("setPairingConfirmation", boolean.class).invoke(device, true);
+                    //device.getClass().getMethod("cancelPairingUserInput", boolean.class).invoke(device);
+                }
+                catch (Exception e) {
+                    Log.i("Log", "Inside the exception: ");
+                    e.printStackTrace();
+                }
+
+                if(arrayListBluetoothDevices.size()<1) // this checks if the size of bluetooth device is 0,then add the
+                {                                           // device to the arraylist.
+                    detectedAdapter.add(device.getName()+"\n"+device.getAddress());
+                    arrayListBluetoothDevices.add(device);
+                    detectedAdapter.notifyDataSetChanged();
+                }
+                else
+                {
+                    boolean flag = true;    // flag to indicate that particular device is already in the arlist or not
+                    for(int i = 0; i<arrayListBluetoothDevices.size();i++)
+                    {
+                        if(device.getAddress().equals(arrayListBluetoothDevices.get(i).getAddress()))
+                        {
+                            flag = false;
+                        }
+                    }
+                    if(flag == true)
+                    {
+                        detectedAdapter.add(device.getName()+"\n"+device.getAddress());
+                        arrayListBluetoothDevices.add(device);
+                        detectedAdapter.notifyDataSetChanged();
+                    }
+                }
+            }           
+        }
+    };
+    private void startSearching() {
+        Log.i("Log", "in the start searching method");
+        IntentFilter intentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        MainActivity.this.registerReceiver(myReceiver, intentFilter);
+        bluetoothAdapter.startDiscovery();
+    }
+    private void onBluetooth() {
+        if(!bluetoothAdapter.isEnabled())
+        {
+            bluetoothAdapter.enable();
+            Log.i("Log", "Bluetooth is Enabled");
+        }
+    }
+    private void offBluetooth() {
+        if(bluetoothAdapter.isEnabled())
+        {
+            bluetoothAdapter.disable();
+        }
+    }
+    private void makeDiscoverable() {
         Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
         discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
         startActivity(discoverableIntent);
-        
-        if(mBluetooth.isDiscovering())
-        	mBluetooth.cancelDiscovery();
-        
-        if(mBluetooth.startDiscovery()){
-        	print("Searching has started!");
-        }
-        else
-        	print("Search did not start!");
-
+        Log.i("Log", "Discoverable ");
     }
-	@Override
-	public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
-	
-	}
+    class HandleSeacrh extends Handler
+    {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case 111:
 
-	@Override
-	public void onStartTrackingTouch(SeekBar arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+                break;
 
-	@Override
-	public void onStopTrackingTouch(SeekBar arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+            default:
+                break;
+            }
+        }
+    }
     
-	// Create a BroadcastReceiver for ACTION_FOUND
-	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-	    public void onReceive(Context context, Intent intent) {
-	    	print("Received");
-            text2.setText("");
-	        String action = intent.getAction();
-	        // When discovery finds a device
-	        if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-	        	print("IN IF\n");
-	            // Get the BluetoothDevice object from the Intent
-	            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-	            // Add the name and address to an array adapter to show in a ListView
-	            text2.setText(device.getName() + " : " + device.getAddress());
-	            System.out.println("test1\n");
-	            devices.add(device.getName() + "\n" + device.getAddress());
-	            System.out.println("test2\n");
-	            for(String item: devices)
-	            	print(item + "\n");
-	        }
-	    }
-	};
+    /*
+     * onProgressChanged, onStartTrackingTouch and onStopTrackingTouch
+     * are functions used to implement the progress bar. 
+     * If the progress is changed on the bar the function onProgressChanged
+     * is called. When you start to change the bar: onStartTrackingTouch and
+     * when you release the bar onStopTrackinTouch. This way you can implement
+     * different things for the three states. 
+     * */
+	@Override
+	public void onProgressChanged(SeekBar seekBar, int progress,
+			boolean fromUser) {
+		textSeek.setText("Seekbar now at: " + progress);
+		progressBar = progress;
+		
+	}
+	@Override
+	public void onStartTrackingTouch(SeekBar seekBar) {
+		textSeek.setText("Start tracking touch..");
+		
+	}
+	@Override
+	public void onStopTrackingTouch(SeekBar seekBar) {
+		textSeek.setText("Stop tracking touch..");
+		textSeek.setText("Progress set at:" + progressBar);
+	}
 }
