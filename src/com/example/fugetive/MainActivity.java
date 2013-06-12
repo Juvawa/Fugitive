@@ -46,7 +46,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
     BluetoothAdapter bluetoothAdapter = null;
     ArrayList<BluetoothDevice> arrayListBluetoothDevices = null;
     ListItemClicked listItemClicked;
-    
+    static int numberOfConnectedDevices;
+  
     //String buffer for send message
     private StringBuffer outStringBuffer;
     
@@ -80,11 +81,24 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
         detectedAdapter.notifyDataSetChanged();
         listViewPaired.setAdapter(adapter);
         
+        numberOfConnectedDevices = 0;
+        
+        IntentFilter connected = new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED);
+        IntentFilter dcRequest = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
+        IntentFilter disconnected = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        
+        this.registerReceiver(myReceiver, connected);
+        this.registerReceiver(myReceiver, dcRequest);
+        this.registerReceiver(myReceiver, disconnected);
+        
         seekBar.setOnSeekBarChangeListener(this);
+    }
+    
+    void print(String s) {
+    	System.out.println(s);
     }
     @Override
     protected void onStart() {
-        // TODO Auto-generated method stub
         super.onStart();
         onBluetooth();
         makeDiscoverable();
@@ -109,17 +123,17 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
     {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            // TODO Auto-generated method stub
             bdDevice = arrayListBluetoothDevices.get(position);
             //bdClass = arrayListBluetoothDevices.get(position);
             Log.i("Log", "The dvice : "+bdDevice.toString());
             /*
              * here below we can do pairing without calling the callthread(), we can directly call the
-             * connect(). but for the safer side we must usethe threading object.
+             * connect(). but for the safer side we must use the threading object.
              */
-            //callThread();
-            //connect(bdDevice);
-            Boolean isBonded = false;
+            callThread();
+            if(connect(bdDevice))
+            	Log.i("Log", "Trying to connect to device: "+bdDevice.toString()+"\n");
+            Boolean isBonded = false; 
             try {
                 isBonded = createBond(bdDevice);
                 if(isBonded)
@@ -127,6 +141,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
                     //arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
                     //adapter.notifyDataSetChanged();
                     getPairedDevices();
+                	MainActivity.numberOfConnectedDevices++;
+                	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");
                     adapter.notifyDataSetChanged();
                 }
             } catch (Exception e) {
@@ -151,12 +167,11 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 
                 Log.i("Log", "Removed"+removeBonding);
             } catch (Exception e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
     }
-    /*private void callThread() {
+    private void callThread() {
         new Thread(){
             public void run() {
                 Boolean isBonded = false;
@@ -168,24 +183,28 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
                         adapter.notifyDataSetChanged();
                     }
                 } catch (Exception e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace(); 
-                }//connect(bdDevice);
+                }
+                connect(bdDevice);
                 Log.i("Log", "The bond is created: "+isBonded);
             }           
         }.start();
-    }*/
+    }
     private Boolean connect(BluetoothDevice bdDevice) { 
         Boolean bool = false;
         try {
-            Log.i("Log", "service metohd is called ");
-            Class cl = Class.forName("android.bluetooth.BluetoothDevice");
-            Class[] par = {};
-            Method method = cl.getMethod("createBond", par);
-            Object[] args = {};
-            bool = (Boolean) method.invoke(bdDevice);//, args);// this invoke creates the detected devices paired.
-            //Log.i("Log", "This is: "+bool.booleanValue());
-            //Log.i("Log", "devicesss: "+bdDevice.getName());
+        	if(MainActivity.numberOfConnectedDevices < 3) {
+	            Log.i("Log", "service metohd is called ");
+	            Class cl = Class.forName("android.bluetooth.BluetoothDevice");
+	            Class[] par = {};
+	            Method method = cl.getMethod("createBond", par);
+	            Object[] args = {};
+	            bool = (Boolean) method.invoke(bdDevice, args);// this invoke creates the detected devices paired.
+	            Log.i("Log", "This is: "+bool.booleanValue());
+	            Log.i("Log", "devicesss: "+bdDevice.getName());
+        	} else {
+        		print("I can only have 3 connections at once, U MAD?!");
+        	}
         } catch (Exception e) {
             Log.i("Log", "Inside catch of serviceFromDevice Method");
             e.printStackTrace();
@@ -206,7 +225,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 
     public boolean createBond(BluetoothDevice btDevice)  
     throws Exception  
-    { 
+    {
+    	Log.i("Log", "CREATING BOND\n");
         Class class1 = Class.forName("android.bluetooth.BluetoothDevice");
         Method createBondMethod = class1.getMethod("createBond");  
         Boolean returnValue = (Boolean) createBondMethod.invoke(btDevice);  
@@ -218,10 +238,11 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
         public void onReceive(Context context, Intent intent) {
             Message msg = Message.obtain();
             String action = intent.getAction();
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
             if(BluetoothDevice.ACTION_FOUND.equals(action)){
                 Toast.makeText(context, "ACTION_FOUND", Toast.LENGTH_SHORT).show();
 
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 try
                 {
                     //device.getClass().getMethod("setPairingConfirmation", boolean.class).invoke(device, true);
@@ -255,7 +276,10 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
                         detectedAdapter.notifyDataSetChanged();
                     }
                 }
-            }           
+            }
+            else if(BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+            	Log.i("Log", "Connected to :" + device.getName());
+            }
         }
     };
     private void startSearching() {
