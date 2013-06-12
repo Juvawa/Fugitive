@@ -25,14 +25,14 @@ void DriveControl::backward() {
    wheel3->pulsewidth(0.0000);
 }
 void DriveControl::turnleft() {
-   wheel1->pulsewidth(0.01);
-   wheel2->pulsewidth(0.01);
-   wheel3->pulsewidth(0.01);
-}
-void DriveControl::turnright() {
    wheel1->pulsewidth(0.0005);
    wheel2->pulsewidth(0.0005);
    wheel3->pulsewidth(0.0005);
+}
+void DriveControl::turnright() {
+   wheel1->pulsewidth(0.01);
+   wheel2->pulsewidth(0.01);
+   wheel3->pulsewidth(0.01);
 }
 
 void DriveControl::stop() {
