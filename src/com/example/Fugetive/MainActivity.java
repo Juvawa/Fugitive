@@ -1,6 +1,8 @@
 package com.example.Fugetive;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Set;
@@ -38,19 +40,24 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
     int progressBar;    
     ArrayList<String> arrayListpaired;
     ArrayAdapter<String> adapter,detectedAdapter;
-    static HandleSeacrh handleSeacrh;
+    static HandleSearch handleSearch;
     BluetoothDevice bdDevice;
     BluetoothServerSocket blueServerSocket; //Bluetooth Socket Socket
     BluetoothSocket blueSocket;				// Bluetooth Socket
+    BluetoothSocket blueSocketClient;			// 2nd bluetooth socket
+    InputStream input;
+    OutputStream output;
     BluetoothClass bdClass;
     ArrayList<BluetoothDevice> arrayListPairedBluetoothDevices;
     ListItemClickedonPaired listItemClickedonPaired;
-    BluetoothAdapter bluetoothAdapter = null;
+    static BluetoothAdapter bluetoothAdapter = null;
     ArrayList<BluetoothDevice> arrayListBluetoothDevices = null;
     ListItemClicked listItemClicked;
     static int numberOfConnectedDevices;
-    UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
+    static UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
+    static String SERVICE_NAME = "Fugitive";
     Handler handler;
+
     
   
     //String buffer for send message
@@ -71,10 +78,10 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
         
         arrayListpaired = new ArrayList<String>();
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        handleSeacrh = new HandleSeacrh();
+        handleSearch = new HandleSearch();
         arrayListPairedBluetoothDevices = new ArrayList<BluetoothDevice>();
         /*
-         * the above declaration is just for getting the paired bluetooth devices;
+         * the above declaration is just for getting the paired Bluetooth devices;
          * this helps in the removing the bond between paired devices.
          */
         listItemClickedonPaired = new ListItemClickedonPaired();
@@ -148,13 +155,13 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
                     getPairedDevices();
                 	MainActivity.numberOfConnectedDevices++;
                 	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");
-                	sendBluetooth();
                     adapter.notifyDataSetChanged();
                 }
             } catch (Exception e) {
                 e.printStackTrace(); 
             }//connect(bdDevice);
             Log.i("Log", "The bond is created: "+isBonded);
+            
         }       
     }
     class ListItemClickedonPaired implements OnItemClickListener
@@ -200,7 +207,7 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
         Boolean bool = false;
         try {
         	if(MainActivity.numberOfConnectedDevices < 3) {
-	            Log.i("Log", "service metohd is called ");
+	            Log.i("Log", "service method is called ");
 	            Class cl = Class.forName("android.bluetooth.BluetoothDevice");
 	            Class[] par = {};
 	            Method method = cl.getMethod("createBond", par);
@@ -315,7 +322,7 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
         startActivity(discoverableIntent);
         Log.i("Log", "Discoverable ");
     }
-    class HandleSeacrh extends Handler
+    static class HandleSearch extends Handler
     {
         @Override
         public void handleMessage(Message msg) {
@@ -329,6 +336,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
             }
         }
     }
+    
+    
     
     /*
      * onProgressChanged, onStartTrackingTouch and onStopTrackingTouch
@@ -357,16 +366,56 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	}
 	
 	public int sendBluetooth(){
+		//Stop discovering to save resources
+		bluetoothAdapter.cancelDiscovery();
+		Log.i("SOCKET", "Discovery Canceled");
 		try{
-		blueSocket = bdDevice.createRfcommSocketToServiceRecord(myUUID);
+			Log.i("SOCKET", "Trying to create a client socket...");
+			blueSocketClient = bdDevice.createRfcommSocketToServiceRecord(myUUID);
+		}
+		catch(Exception e){
+			Log.i("SOCKET", "Client socket did not initiate");
+		}
+		Log.i("SOCKET", "Client socket created, opening listener.");
+		try {
+			blueServerSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord("THIEF", myUUID);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		Log.i("SOCKET", "openend server socket at: " + bluetoothAdapter.getAddress());
+		try{
+			 blueSocket = blueServerSocket.accept();
+			 input = blueSocket.getInputStream();
+			 output = blueSocket.getOutputStream();
+			 blueServerSocket.close();
 		}
 		catch(IOException e){
-			Log.i("Log", "Socket did not initiate");
+			Log.i("SOCKET", "Could not open accept server socket");
 		}
-		BluetoothSocketListener myListener = new BluetoothSocketListener(blueSocket, handler, textSeek);
-		Thread messageListener = new Thread(myListener);
-		messageListener.start();
+		try{
+			Log.i("SOCKET", "Server socket created, client socket trying to connect");
+			blueSocketClient.connect();
+		}
+		catch(IOException e){
+			Log.i("SOCKET", "Client socket trying to connect, did not succeed.");
+			e.printStackTrace();
+		}
 		
 		return 0;
+	}
+
+	public static void newValue(int value) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void stop() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public static void onError(String string, String string2) {
+		// TODO Auto-generated method stub
+		
 	}
 }

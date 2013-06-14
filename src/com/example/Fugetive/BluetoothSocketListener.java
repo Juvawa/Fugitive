@@ -3,7 +3,7 @@ package com.example.Fugetive;
 import java.io.IOException;
 import java.io.InputStream;
 
-import android.bluetooth.BluetoothSocket;
+import android.bluetooth.*;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.TextView;
