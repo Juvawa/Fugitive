@@ -141,8 +141,6 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
                     //arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
                     //adapter.notifyDataSetChanged();
                     getPairedDevices();
-                	MainActivity.numberOfConnectedDevices++;
-                	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");
                     adapter.notifyDataSetChanged();
                 }
             } catch (Exception e) {
@@ -279,6 +277,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
             }
             else if(BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
             	Log.i("Log", "Connected to :" + device.getName());
+            	MainActivity.numberOfConnectedDevices++;
+            	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");            	
             }
         }
     };
