@@ -1,14 +1,14 @@
 package com.example.Fugetive;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.UUID;
 
 import android.R.bool;
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothClass;
-import android.bluetooth.BluetoothDevice;
+import android.bluetooth.*;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -40,6 +40,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
     ArrayAdapter<String> adapter,detectedAdapter;
     static HandleSeacrh handleSeacrh;
     BluetoothDevice bdDevice;
+    BluetoothServerSocket blueServerSocket; //Bluetooth Socket Socket
+    BluetoothSocket blueSocket;				// Bluetooth Socket
     BluetoothClass bdClass;
     ArrayList<BluetoothDevice> arrayListPairedBluetoothDevices;
     ListItemClickedonPaired listItemClickedonPaired;
@@ -47,6 +49,9 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
     ArrayList<BluetoothDevice> arrayListBluetoothDevices = null;
     ListItemClicked listItemClicked;
     static int numberOfConnectedDevices;
+    UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
+    Handler handler;
+    
   
     //String buffer for send message
     private StringBuffer outStringBuffer;
@@ -141,6 +146,9 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
                     //arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
                     //adapter.notifyDataSetChanged();
                     getPairedDevices();
+                	MainActivity.numberOfConnectedDevices++;
+                	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");
+                	sendBluetooth();
                     adapter.notifyDataSetChanged();
                 }
             } catch (Exception e) {
@@ -346,5 +354,19 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	public void onStopTrackingTouch(SeekBar seekBar) {
 		textSeek.setText("Stop tracking touch...");
 		textSeek.setText("Progress set at:" + progressBar);
+	}
+	
+	public int sendBluetooth(){
+		try{
+		blueSocket = bdDevice.createRfcommSocketToServiceRecord(myUUID);
+		}
+		catch(IOException e){
+			Log.i("Log", "Socket did not initiate");
+		}
+		BluetoothSocketListener myListener = new BluetoothSocketListener(blueSocket, handler, textSeek);
+		Thread messageListener = new Thread(myListener);
+		messageListener.start();
+		
+		return 0;
 	}
 }
