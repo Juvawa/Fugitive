@@ -1,421 +1,203 @@
 package com.example.Fugetive;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.UUID;
+import android.os.Bundle;
+import android.app.Activity;
+import android.view.Menu;
+import android.bluetooth.*;
+import android.content.*;
+import android.os.*;
+import android.util.Log;
+import android.view.*;
+import android.widget.*;
+
+import java.io.*;
+import java.util.*;
+import java.lang.*;
 
 import android.R.bool;
-import android.app.Activity;
-import android.bluetooth.*;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.ParcelUuid;
-import android.util.Log;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.SeekBar;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.AdapterView.OnItemClickListener;
+
 
 public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeListener{
-    /** Called when the activity is first created. */
-    ListView listViewPaired;
-    ListView listViewDetected;
-    SeekBar seekBar;
-    TextView textSeek;
-    int progressBar;    
-    ArrayList<String> arrayListpaired;
-    ArrayAdapter<String> adapter,detectedAdapter;
-    static HandleSearch handleSearch;
-    BluetoothDevice bdDevice;
-    BluetoothServerSocket blueServerSocket; //Bluetooth Socket Socket
-    BluetoothSocket blueSocket;				// Bluetooth Socket
-    BluetoothSocket blueSocketClient;			// 2nd bluetooth socket
-    InputStream input;
-    OutputStream output;
-    BluetoothClass bdClass;
-    ArrayList<BluetoothDevice> arrayListPairedBluetoothDevices;
-    ListItemClickedonPaired listItemClickedonPaired;
-    static BluetoothAdapter bluetoothAdapter = null;
-    ArrayList<BluetoothDevice> arrayListBluetoothDevices = null;
-    ListItemClicked listItemClicked;
-    static int numberOfConnectedDevices;
-    static UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
-    static String SERVICE_NAME = "Fugitive";
-    Handler handler;
-
-    
-  
-    //String buffer for send message
-    private StringBuffer outStringBuffer;
-    
-    @Override 
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        
-        listViewDetected = (ListView) findViewById(R.id.listViewDetected);
-        listViewPaired = (ListView) findViewById(R.id.listViewPaired);
-        seekBar = (SeekBar) findViewById(R.id.seekBar1);
-        textSeek = (TextView) findViewById(R.id.textViewSeek);
-        
-        //Initialise outgoing stringbuffer
-        outStringBuffer = new StringBuffer("");
-        
-        arrayListpaired = new ArrayList<String>();
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        handleSearch = new HandleSearch();
-        arrayListPairedBluetoothDevices = new ArrayList<BluetoothDevice>();
-        /*
-         * the above declaration is just for getting the paired Bluetooth devices;
-         * this helps in the removing the bond between paired devices.
-         */
-        listItemClickedonPaired = new ListItemClickedonPaired();
-        arrayListBluetoothDevices = new ArrayList<BluetoothDevice>();
-        adapter= new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, arrayListpaired);
-        detectedAdapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_single_choice);
-        listViewDetected.setAdapter(detectedAdapter);
-        listItemClicked = new ListItemClicked();
-        detectedAdapter.notifyDataSetChanged();
-        listViewPaired.setAdapter(adapter);
-        
-        numberOfConnectedDevices = 0;
-        
-        IntentFilter connected = new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED);
-        IntentFilter dcRequest = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
-        IntentFilter disconnected = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-        
-        this.registerReceiver(myReceiver, connected);
-        this.registerReceiver(myReceiver, dcRequest);
-        this.registerReceiver(myReceiver, disconnected);
-        
-        seekBar.setOnSeekBarChangeListener(this);
-    }
-    
-    void print(String s) {
-    	System.out.println(s);
-    }
-    @Override
-    protected void onStart() {
-        super.onStart();
-        onBluetooth();
-        makeDiscoverable();
-        startSearching();
-        getPairedDevices();
-        listViewDetected.setOnItemClickListener(listItemClicked);
-        listViewPaired.setOnItemClickListener(listItemClickedonPaired);
-    }
-    private void getPairedDevices() {
-        Set<BluetoothDevice> pairedDevice = bluetoothAdapter.getBondedDevices();            
-        if(pairedDevice.size()>0)
-        {
-            for(BluetoothDevice device : pairedDevice)
-            {
-                arrayListpaired.add(device.getName()+"\n"+device.getAddress());
-                arrayListPairedBluetoothDevices.add(device);
-            }
-        }
-        adapter.notifyDataSetChanged();
-    }
-    class ListItemClicked implements OnItemClickListener
-    {
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            bdDevice = arrayListBluetoothDevices.get(position);
-            //bdClass = arrayListBluetoothDevices.get(position);
-            Log.i("Log", "The dvice : "+bdDevice.toString());
-            /*
-             * here below we can do pairing without calling the callthread(), we can directly call the
-             * connect(). but for the safer side we must use the threading object.
-             */
-            callThread();
-            if(connect(bdDevice))
-            	Log.i("Log", "Trying to connect to device: "+bdDevice.toString()+"\n");
-            Boolean isBonded = false; 
-            try {
-                isBonded = createBond(bdDevice);
-                if(isBonded)
-                {
-                    //arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
-                    //adapter.notifyDataSetChanged();
-                    getPairedDevices();
-                	MainActivity.numberOfConnectedDevices++;
-                	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");
-                    adapter.notifyDataSetChanged();
-                }
-            } catch (Exception e) {
-                e.printStackTrace(); 
-            }//connect(bdDevice);
-            Log.i("Log", "The bond is created: "+isBonded);
-            
-        }       
-    }
-    class ListItemClickedonPaired implements OnItemClickListener
-    {
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position,long id) {
-            bdDevice = arrayListPairedBluetoothDevices.get(position);
-            try {
-                Boolean removeBonding = removeBond(bdDevice);
-                if(removeBonding)
-                {
-                    arrayListpaired.remove(position);
-                    adapter.notifyDataSetChanged();
-                }
-
-
-                Log.i("Log", "Removed"+removeBonding);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    private void callThread() {
-        new Thread(){
-            public void run() {
-                Boolean isBonded = false;
-                try {
-                    isBonded = createBond(bdDevice);
-                    if(isBonded)
-                    {
-                        arrayListpaired.add(bdDevice.getName()+"\n"+bdDevice.getAddress());
-                        adapter.notifyDataSetChanged();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace(); 
-                }
-                connect(bdDevice);
-                Log.i("Log", "The bond is created: "+isBonded);
-            }           
-        }.start();
-    }
-    private Boolean connect(BluetoothDevice bdDevice) { 
-        Boolean bool = false;
-        try {
-        	if(MainActivity.numberOfConnectedDevices < 3) {
-	            Log.i("Log", "service method is called ");
-	            Class cl = Class.forName("android.bluetooth.BluetoothDevice");
-	            Class[] par = {};
-	            Method method = cl.getMethod("createBond", par);
-	            Object[] args = {};
-	            bool = (Boolean) method.invoke(bdDevice, args);// this invoke creates the detected devices paired.
-	            Log.i("Log", "This is: "+bool.booleanValue());
-	            Log.i("Log", "devicesss: "+bdDevice.getName());
-        	} else {
-        		print("I can only have 3 connections at once, U MAD?!");
-        	}
-        } catch (Exception e) {
-            Log.i("Log", "Inside catch of serviceFromDevice Method");
-            e.printStackTrace();
-        }
-        return bool.booleanValue();
-    };
-
-
-    public boolean removeBond(BluetoothDevice btDevice)  
-    throws Exception  
-    {  
-        Class btClass = Class.forName("android.bluetooth.BluetoothDevice");
-        Method removeBondMethod = btClass.getMethod("removeBond");  
-        Boolean returnValue = (Boolean) removeBondMethod.invoke(btDevice);  
-        return returnValue.booleanValue();  
-    }
-
-
-    public boolean createBond(BluetoothDevice btDevice)  
-    throws Exception  
-    {
-    	Log.i("Log", "CREATING BOND\n");
-        Class class1 = Class.forName("android.bluetooth.BluetoothDevice");
-        Method createBondMethod = class1.getMethod("createBond");  
-        Boolean returnValue = (Boolean) createBondMethod.invoke(btDevice);  
-        return returnValue.booleanValue();  
-    }  
-
-    private BroadcastReceiver myReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Message msg = Message.obtain();
-            String action = intent.getAction();
-            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-
-            if(BluetoothDevice.ACTION_FOUND.equals(action)){
-                Toast.makeText(context, "ACTION_FOUND", Toast.LENGTH_SHORT).show();
-
-                try
-                {
-                    //device.getClass().getMethod("setPairingConfirmation", boolean.class).invoke(device, true);
-                    //device.getClass().getMethod("cancelPairingUserInput", boolean.class).invoke(device);
-                }
-                catch (Exception e) {
-                    Log.i("Log", "Inside the exception: ");
-                    e.printStackTrace();
-                }
-
-                if(arrayListBluetoothDevices.size()<1) // this checks if the size of bluetooth device is 0,then add the
-                {                                           // device to the arraylist.
-                    detectedAdapter.add(device.getName()+"\n"+device.getAddress());
-                    arrayListBluetoothDevices.add(device);
-                    detectedAdapter.notifyDataSetChanged();
-                }
-                else
-                {
-                    boolean flag = true;    // flag to indicate that particular device is already in the arlist or not
-                    for(int i = 0; i<arrayListBluetoothDevices.size();i++)
-                    {
-                        if(device.getAddress().equals(arrayListBluetoothDevices.get(i).getAddress()))
-                        {
-                            flag = false;
-                        }
-                    }
-                    if(flag == true)
-                    {
-                        detectedAdapter.add(device.getName()+"\n"+device.getAddress());
-                        arrayListBluetoothDevices.add(device);
-                        detectedAdapter.notifyDataSetChanged();
-                    }
-                }
-            }
-            else if(BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
-            	Log.i("Log", "Connected to :" + device.getName());
-            	MainActivity.numberOfConnectedDevices++;
-            	Log.i("Log", "Connected device number: "+numberOfConnectedDevices+"\n");            	
-            }
-        }
-    };
-    private void startSearching() {
-        Log.i("Log", "in the start searching method");
-        IntentFilter intentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        MainActivity.this.registerReceiver(myReceiver, intentFilter);
-        bluetoothAdapter.startDiscovery();
-    }
-    private void onBluetooth() {
-        if(!bluetoothAdapter.isEnabled())
-        {
-            bluetoothAdapter.enable();
-            Log.i("Log", "Bluetooth is Enabled");
-        }
-    }
-    private void offBluetooth() {
-        if(bluetoothAdapter.isEnabled())
-        {
-            bluetoothAdapter.disable();
-        }
-    }
-    private void makeDiscoverable() {
-        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-        startActivity(discoverableIntent);
-        Log.i("Log", "Discoverable ");
-    }
-    static class HandleSearch extends Handler
-    {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-            case 111:
-
-                break;
-
-            default:
-                break;
-            }
-        }
-    }
-    
-    
-    
-    /*
-     * onProgressChanged, onStartTrackingTouch and onStopTrackingTouch
-     * are functions used to implement the progress bar. 
-     * If the progress is changed on the bar the function onProgressChanged
-     * is called. When you start to change the bar: onStartTrackingTouch and
-     * when you release the bar onStopTrackinTouch. This way you can implement
-     * different things for the three states. 
-     * */
+	//Global variables layout
+	static SeekBar seekbar;
+	static TextView textview, textview2;
+	static int progressbar;
+	static Handler serverHandler = null;
+	static Handler clientHandler = null;
+	//Global variables bluetooth
+	BluetoothDevice blueDevice;
+	static BluetoothAdapter blueAdapter = null;
+	static BluetoothServerSocket blueServer;
+	static BluetoothSocket blueClient = null, blueClientS = null;
+	
+	//IO streams
+	static InputStream input;
+	static OutputStream output;
+	byte[] byteStream;
+	
+	//Hardcoded stuff to make connection easier for now..
+	static String myBlue_Name, myBlue_Mac;
+	static String myBlue_NameH= "projectThief1"; //16
+	static String nmyBlue_Name = "projectThief2"; //5
+	static String myBlue_MacH = "A0:F4:50:CC:19:38"; //16
+	static String nmyBlue_Mac = "A0:F4:50:9F:FC:1A"; //5
+	
+	//Hardcoded service name and UUID for socket connection
+	static String serviceName = "testBlue";
+	static UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
+	
 	@Override
-	public void onProgressChanged(SeekBar seekBar, int progress,
-			boolean fromUser) {
-		textSeek.setText("Seekbar now at: " + progress);
-		progressBar = progress;
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		//Layout shizzle
+		textview = (TextView) findViewById(R.id.textView1);
+		seekbar = (SeekBar) findViewById(R.id.seekBar1);
+		seekbar.setOnSeekBarChangeListener(this);
 		
-	}
-	@Override
-	public void onStartTrackingTouch(SeekBar seekBar) {
-		textSeek.setText("Start tracking touch..");
-		
-	}
-	@Override
-	public void onStopTrackingTouch(SeekBar seekBar) {
-		textSeek.setText("Stop tracking touch...");
-		textSeek.setText("Progress set at:" + progressBar);
+		//bluetooth
+		blueAdapter = BluetoothAdapter.getDefaultAdapter();
+		if(!blueAdapter.isEnabled()){
+			blueAdapter.enable();
+			Log.i("BlueLog", "Bluetooth is enabled");
+		}
+		myBlue_Name = blueAdapter.getName();
+		myBlue_Mac = blueAdapter.getAddress();
+		Log.i("BlueLog", "myBlue_Name: "+ myBlue_Name + " MyBlue_Mac: " + myBlue_Mac);
+		if(myBlue_Mac.equals(myBlue_MacH)){
+			Log.i("BlueLog", "Variables do not change...");
+		}
+		else if(myBlue_Mac.equals(nmyBlue_Mac)){
+			nmyBlue_Mac = myBlue_MacH;
+			nmyBlue_Name = myBlue_NameH;
+			Log.i("BlueLog", "Variables DO change...");
+		}
+		byteStream = new byte[1024];
+		Log.i("BlueLog", "OnCreate finished...");
+		serverHandler = new Handler(){
+			@Override
+			public void handleMessage(Message msg) {
+				Log.i("BlueLog", "Trying to read data...");
+				byte[] readBuf = (byte[]) msg.obj;
+				int value = new Integer(msg.arg1);
+				seekbar.setProgress(value);
+				Log.i("BlueLog", "Progress changed to: "+value);
+				serverHandler.removeMessages(1);
+				
+			}
+		}; 
+		clientHandler = new Handler(){
+			@Override
+			public void handleMessage(Message msg) {
+				Log.i("BlueLog", "Trying to read data...");
+				int value = (Integer) msg.obj;
+				seekbar.setProgress(value);
+				Log.i("BlueLog", "Progress changed to: "+value);
+				clientHandler.removeMessages(1);
+			}
+		};
 	}
 	
-	public int sendBluetooth(){
-		//Stop discovering to save resources
-		bluetoothAdapter.cancelDiscovery();
-		Log.i("SOCKET", "Discovery Canceled");
-		try{
-			Log.i("SOCKET", "Trying to create a client socket...");
-			blueSocketClient = bdDevice.createRfcommSocketToServiceRecord(myUUID);
-		}
-		catch(Exception e){
-			Log.i("SOCKET", "Client socket did not initiate");
-		}
-		Log.i("SOCKET", "Client socket created, opening listener.");
+	@Override
+    protected void onStart(){
+		super.onStart();
+		Thread BlueServer = new Thread(new BlueServerSock(blueAdapter));
+		BlueServer.start();
+		Thread BlueClient = new Thread(new BlueClientSocket(blueAdapter));
+		BlueClient.start();
+		
+	}
+	/*
+	 * Function that implements to listen for a incoming client connection.
+	 * 
+	public void manageBlueServer(){
 		try {
-			blueServerSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord("THIEF", myUUID);
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
-		Log.i("SOCKET", "openend server socket at: " + bluetoothAdapter.getAddress());
-		try{
-			 blueSocket = blueServerSocket.accept();
-			 input = blueSocket.getInputStream();
-			 output = blueSocket.getOutputStream();
-			 blueServerSocket.close();
-		}
-		catch(IOException e){
-			Log.i("SOCKET", "Could not open accept server socket");
-		}
-		try{
-			Log.i("SOCKET", "Server socket created, client socket trying to connect");
-			blueSocketClient.connect();
-		}
-		catch(IOException e){
-			Log.i("SOCKET", "Client socket trying to connect, did not succeed.");
+			input = blueClientS.getInputStream();
+		} catch (IOException e) {
+			Log.i("BlueLog", "Server: InputStream did NOT initialize...");
 			e.printStackTrace();
 		}
+		try {
+			output = blueClientS.getOutputStream();
+		} catch (IOException e) {
+			Log.i("BlueLog", "Server: OutputStream did NOT initialize...");
+			e.printStackTrace();
+		}
+		Log.i("BlueLog", "Server: Input & Output are initialised...");
+		Thread socketRead = new Thread(new SocketRead());
+		socketRead.start();
+		Thread socketWrite = new Thread(new SocketWrite());
+		socketWrite.start();
 		
-		return 0;
+		
+	}
+	
+	public void manageBlueClient(){
+		try {
+			input = blueClient.getInputStream();
+		} catch (IOException e) {
+			Log.i("BlueLog", "Client: InputStream did NOT initialize...");
+			e.printStackTrace();
+		}
+		try {
+			output = blueClient.getOutputStream();
+		} catch (IOException e) {
+			Log.i("BlueLog", "Client: OutputStream did NOT initialize...");
+			e.printStackTrace();
+		}
+		Log.i("BlueLog", "Client: Input & Output are initialised...");
+		Thread socketRead2 = new Thread(new SocketRead());
+		socketRead2.start();
+		Thread socketWrite2 = new Thread(new SocketWrite());
+		socketWrite2.start();
+	}*/
+	
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
 	}
 
-	public static void newValue(int value) {
-		// TODO Auto-generated method stub
+	@Override
+	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+		//Log.i("Log", "onProgressedChanged");
+		textview.setText("Progress changing to: " + progress);
+		progressbar = progress;
 		
 	}
 
-	public void stop() {
-		// TODO Auto-generated method stub
+	@Override
+	public void onStartTrackingTouch(SeekBar seekBar) {
+		//Log.i("Log", "onStartTrackingTouch");
+		textview.setText("Progress is changing, last value: " + progressbar);
 		
 	}
 
-	public static void onError(String string, String string2) {
-		// TODO Auto-generated method stub
-		
+	@Override
+	public void onStopTrackingTouch(SeekBar seekBar) {
+		//Log.i("Log", "onStopTrackingTouch");
+		textview.setText("Progress has changed to: " + progressbar);
+		byteStream = intToByteArray(progressbar);
+		Log.i("BlueLog", "byteStream: " + byteStream);
+		writeStream(byteStream);
 	}
+	
+	public static byte[] intToByteArray(int value) {
+	    byte[] b = new byte[1];
+	    b[0] = (byte) value;
+	    return b;
+	}
+	
+	public void writeStream(byte[] writeStream){
+		Log.i("BlueLog", "BlueClient trying to write...");
+		try {
+			Log.i("BlueLog", "bufferout "+writeStream[0]);
+			output.write(writeStream[0]);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 }
