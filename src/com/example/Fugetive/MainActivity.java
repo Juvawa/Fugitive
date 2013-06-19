@@ -29,6 +29,7 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	static BluetoothAdapter blueAdapter = null;
 	static BluetoothServerSocket blueServer;
 	static BluetoothSocket blueClient = null, blueClientS = null;
+	boolean testBlue = true;
 	
 	//IO streams
 	static InputStream input;
@@ -57,10 +58,14 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 		
 		//bluetooth
 		blueAdapter = BluetoothAdapter.getDefaultAdapter();
-		if(!blueAdapter.isEnabled()){
-			blueAdapter.enable();
-			Log.i("BlueLog", "Bluetooth is enabled");
-		}
+		do{
+			if(!blueAdapter.isEnabled()){
+				blueAdapter.enable();
+				Log.i("BlueLog", "Bluetooth is enabled");
+			}else{
+				testBlue = false;
+			}	
+		}while(testBlue);
 		myBlue_Name = blueAdapter.getName();
 		myBlue_Mac = blueAdapter.getAddress();
 		Log.i("BlueLog", "myBlue_Name: "+ myBlue_Name + " MyBlue_Mac: " + myBlue_Mac);
