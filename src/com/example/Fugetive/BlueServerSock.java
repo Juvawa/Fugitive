@@ -31,6 +31,7 @@ public class BlueServerSock implements Runnable{
 	public void run() {
 		
 		try {
+			Log.i("pairing", "aan het pairen");
 			tmp = blueAdapter.listenUsingRfcommWithServiceRecord(MainActivity.serviceName, MainActivity.myUUID);
 		} catch (IOException e) {
 			Log.i("BlueLog", "BlueServer did NOT initialise...");

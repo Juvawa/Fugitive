@@ -34,6 +34,7 @@ public class BlueClientSocket implements Runnable{
 		blueAdapter.cancelDiscovery();
 		remDevice = blueAdapter.getRemoteDevice(nmyBlue_Mac);
 		try {
+			Log.i("pairing", "aan het pairen");
 			tmp = remDevice.createRfcommSocketToServiceRecord(MainActivity.myUUID);
 		} catch (IOException e) {
 			Log.i("BlueLog", "Client Socket could not create from remote device...");

@@ -1,6 +1,7 @@
 package com.example.Fugetive;
 
 import android.os.Bundle;
+import android.os.Message;
 import android.app.Activity;
 import android.view.Menu;
 import android.bluetooth.*;
@@ -36,126 +37,137 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	static OutputStream output;
 	byte[] byteStream;
 	
+	//initiate list which will contain paired and discovered bluetooth devices.
+	ArrayList<BluetoothDevice> arrayListBluetoothDevices;
+	ArrayAdapter<String> detectedAdapter;
+	
 	//Hardcoded stuff to make connection easier for now..
 	static String myBlue_Name, myBlue_Mac;
 	static String myBlue_NameH= "projectThief1"; //16
 	static String nmyBlue_Name = "projectThief2"; //5
-	static String myBlue_MacH = "A0:F4:50:CC:19:38"; //16
+	static String myBlue_MacH = "A0:F4:50:CB:0B:26"; //16
 	static String nmyBlue_Mac = "A0:F4:50:9F:FC:1A"; //5
-	
+	public static String tag = "fugitive";
+	public String myName = "";
 	//Hardcoded service name and UUID for socket connection
 	static String serviceName = "testBlue";
 	static UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
 	
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
-		//Layout shizzle
-		textview = (TextView) findViewById(R.id.textView1);
-		seekbar = (SeekBar) findViewById(R.id.seekBar1);
-		seekbar.setOnSeekBarChangeListener(this);
 		
-		//bluetooth
-		blueAdapter = BluetoothAdapter.getDefaultAdapter();
-		do{
-			if(!blueAdapter.isEnabled()){
-				blueAdapter.enable();
-				Log.i("BlueLog", "Bluetooth is enabled");
-			}else{
-				testBlue = false;
-			}	
-		}while(testBlue);
-		myBlue_Name = blueAdapter.getName();
-		myBlue_Mac = blueAdapter.getAddress();
-		Log.i("BlueLog", "myBlue_Name: "+ myBlue_Name + " MyBlue_Mac: " + myBlue_Mac);
-		if(myBlue_Mac.equals(myBlue_MacH)){
-			Log.i("BlueLog", "Variables do not change...");
-		}
-		else if(myBlue_Mac.equals(nmyBlue_Mac)){
-			nmyBlue_Mac = myBlue_MacH;
-			nmyBlue_Name = myBlue_NameH;
-			Log.i("BlueLog", "Variables DO change...");
-		}
-		byteStream = new byte[1024];
-		Log.i("BlueLog", "OnCreate finished...");
-		serverHandler = new Handler(){
-			@Override
-			public void handleMessage(Message msg) {
-				Log.i("BlueLog", "Trying to read data...");
-				byte[] readBuf = (byte[]) msg.obj;
-				int value = new Integer(msg.arg1);
-				seekbar.setProgress(value);
-				Log.i("BlueLog", "Progress changed to: "+value);
-				serverHandler.removeMessages(1);
+		 
+		
+		super.onCreate(savedInstanceState);
+			setContentView(R.layout.activity_main);
+			//Layout shizzle
+			textview = (TextView) findViewById(R.id.textView1);
+			seekbar = (SeekBar) findViewById(R.id.seekBar1);
+			seekbar.setOnSeekBarChangeListener(this);
+			
+			//bluetooth
+			blueAdapter = BluetoothAdapter.getDefaultAdapter();
+			do{
+				if(!blueAdapter.isEnabled()){
+					blueAdapter.enable();
+					Log.i("BlueLog", "Bluetooth is enabled");
+				}else{
+					testBlue = false;
+					Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+					discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 12);
+
+					startActivity(discoverableIntent);
+					
+				}	
+			}while(testBlue);
+			final BroadcastReceiver myReciever = new BroadcastReceiver() {
 				
+				@Override
+		        public void onReceive(Context context, Intent intent) {
+					String action = intent.getAction();
+
+		            if(BluetoothDevice.ACTION_FOUND.equals(action)){
+		                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+		                if(device.getName().indexOf("fugitive") > -1){
+		                	Log.i("Detection", "device detected " + device.getName());
+		                	
+		                }
+						
+		            }
+		            
+				}
+		           
+		    };
+			
+			IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);		 
+		    registerReceiver(myReciever, filter);
+			
+		   if(blueAdapter.startDiscovery()){
+			   while(!blueAdapter.isDiscovering()){
+				   Log.i("test", "whatever " + blueAdapter.isDiscovering());
+			   }
 			}
-		}; 
-		clientHandler = new Handler(){
-			@Override
-			public void handleMessage(Message msg) {
-				Log.i("BlueLog", "Trying to read data...");
-				int value = (Integer) msg.obj;
-				seekbar.setProgress(value);
-				Log.i("BlueLog", "Progress changed to: "+value);
-				clientHandler.removeMessages(1);
+			//set discoverable name to fugitive_"MAC_ADDRESS"
+			
+			myBlue_Mac = blueAdapter.getAddress();
+			myBlue_Name = blueAdapter.getName();		
+			myName = tag + "_" + myBlue_Mac;
+			blueAdapter.setName(myName);
+			
+			if(myBlue_Mac.equals(myBlue_MacH)){
+				Log.i("BlueLog", "Variables do not change...");
 			}
-		};
+			else if(myBlue_Mac.equals(nmyBlue_Mac)){
+				nmyBlue_Mac = myBlue_MacH;
+				nmyBlue_Name = myBlue_NameH;
+				Log.i("BlueLog", "Variables DO change...");
+			}
+			byteStream = new byte[1024];
+			Log.i("BlueLog", "OnCreate finished...");
+			
+			serverHandler = new Handler(){
+				@Override
+				public void handleMessage(Message msg) {
+					Log.i("BlueLog", "Trying to read data...");
+					byte[] readBuf = (byte[]) msg.obj;
+					int value = new Integer(msg.arg1);
+					seekbar.setProgress(value);
+					Log.i("BlueLog", "Progress changed to: "+value);
+					serverHandler.removeMessages(1);
+					
+				}
+			}; 
+			clientHandler = new Handler(){
+				@Override
+				public void handleMessage(Message msg) {
+					Log.i("BlueLog", "Trying to read data...");
+					int value = (Integer) msg.obj;
+					seekbar.setProgress(value);
+					Log.i("BlueLog", "Progress changed to: "+value);
+					clientHandler.removeMessages(1);
+				}
+			};
 	}
+	
+	
 	
 	@Override
-    protected void onStart(){
+	protected void onStart(){
 		super.onStart();
-		Thread BlueServer = new Thread(new BlueServerSock(blueAdapter));
-		BlueServer.start();
-		Thread BlueClient = new Thread(new BlueClientSocket(blueAdapter));
-		BlueClient.start();
 		
-	}
-	/*
-	 * Function that implements to listen for a incoming client connection.
-	 * 
-	public void manageBlueServer(){
-		try {
-			input = blueClientS.getInputStream();
-		} catch (IOException e) {
-			Log.i("BlueLog", "Server: InputStream did NOT initialize...");
-			e.printStackTrace();
+		//BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
+		while(true){
+			if(!blueAdapter.isDiscovering()){
+				Log.i("test", "discoverable?" + blueAdapter.isDiscovering());
+				Thread BlueServer = new Thread(new BlueServerSock(blueAdapter));
+		 		BlueServer.start();
+		 		Thread BlueClient = new Thread(new BlueClientSocket(blueAdapter));
+		 		BlueClient.start();
+		 		break;
+			}
 		}
-		try {
-			output = blueClientS.getOutputStream();
-		} catch (IOException e) {
-			Log.i("BlueLog", "Server: OutputStream did NOT initialize...");
-			e.printStackTrace();
-		}
-		Log.i("BlueLog", "Server: Input & Output are initialised...");
-		Thread socketRead = new Thread(new SocketRead());
-		socketRead.start();
-		Thread socketWrite = new Thread(new SocketWrite());
-		socketWrite.start();
-		
-		
-	}
-	
-	public void manageBlueClient(){
-		try {
-			input = blueClient.getInputStream();
-		} catch (IOException e) {
-			Log.i("BlueLog", "Client: InputStream did NOT initialize...");
-			e.printStackTrace();
-		}
-		try {
-			output = blueClient.getOutputStream();
-		} catch (IOException e) {
-			Log.i("BlueLog", "Client: OutputStream did NOT initialize...");
-			e.printStackTrace();
-		}
-		Log.i("BlueLog", "Client: Input & Output are initialised...");
-		Thread socketRead2 = new Thread(new SocketRead());
-		socketRead2.start();
-		Thread socketWrite2 = new Thread(new SocketWrite());
-		socketWrite2.start();
-	}*/
+     }
 	
 
 	@Override
@@ -204,5 +216,10 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 			e.printStackTrace();
 		}
 	}
-
+	
+	@Override
+	protected void onRestart(){
+		//registerReceiver(myReciever, intentFilter);
+		super.onRestart();
+	}
 }
