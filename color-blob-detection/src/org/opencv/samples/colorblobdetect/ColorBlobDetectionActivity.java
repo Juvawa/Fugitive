@@ -266,6 +266,10 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
                 minY = mOpenCvCameraView.getHeight();
                 maxX = 0;
                 maxY = 0; 
+            } else {
+            	if(dir != 0)
+            	   mbed.sendString("MS");
+            	dir = 0;
             }
             Imgproc.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
 
