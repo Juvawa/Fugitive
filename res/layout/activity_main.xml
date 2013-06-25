@@ -36,7 +36,7 @@
         android:layout_alignRight="@+id/seekBar1"
         android:layout_below="@+id/seekBar1"
         android:layout_marginTop="56dp"
-        android:text="Large Text"
+        android:text=""
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
 </RelativeLayout>

@@ -41,6 +41,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	ArrayList<BluetoothDevice> arrayListBluetoothDevices;
 	ArrayAdapter<String> detectedAdapter;
 	
+	String[] blueFound = new String[3];
+	
 	//Hardcoded stuff to make connection easier for now..
 	static String myBlue_Name, myBlue_Mac;
 	static String myBlue_NameH= "projectThief1"; //16
@@ -52,7 +54,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	//Hardcoded service name and UUID for socket connection
 	static String serviceName = "testBlue";
 	static UUID myUUID = UUID.fromString("00001101-0000-1000-8000-FFFFFFFFFFFF");
-	
+	public int counter = 0;
+	public int foundDevs = 0;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +66,8 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 			setContentView(R.layout.activity_main);
 			//Layout shizzle
 			textview = (TextView) findViewById(R.id.textView1);
+			textview2 = (TextView) findViewById(R.id.textView2);
+
 			seekbar = (SeekBar) findViewById(R.id.seekBar1);
 			seekbar.setOnSeekBarChangeListener(this);
 			
@@ -75,7 +80,7 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 				}else{
 					testBlue = false;
 					Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-					discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 12);
+					discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 0);
 
 					startActivity(discoverableIntent);
 					
@@ -86,15 +91,42 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 				@Override
 		        public void onReceive(Context context, Intent intent) {
 					String action = intent.getAction();
-
+					int i = 0;
+					Log.i("debug", "inside broadcastreceiver");
 		            if(BluetoothDevice.ACTION_FOUND.equals(action)){
 		                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 		                if(device.getName().indexOf("fugitive") > -1){
-		                	Log.i("Detection", "device detected " + device.getName());
-		                	
+		                	if(blueFound[i] == null){
+		                		blueFound[i] = (String)device.getName();
+		                		Log.i("detection", " " + blueFound[counter - 1]);
+		                	}
+		                	else{
+		                		boolean flag = true;
+		                		Log.i("debug", "inside broadcastreceiver ELSE");
+		                		for(i = 0; i<3; i++){
+		                			Log.i("debug", "inside broadcastreceiver FOR" + i);
+		                			if(blueFound[i].equals(device.getName())){
+		                				flag = false;
+		                			}
+		                			
+		                		}
+		                		if(flag){
+		                			blueFound[i] = (String)device.getName();
+		                		}
+		                	}
 		                }
-						
+		                
 		            }
+		            
+				}  
+		    };
+		    
+		    final BroadcastReceiver discoveryStopped = new BroadcastReceiver() {
+				
+				@Override
+		        public void onReceive(Context context, Intent intent) {
+					Log.i("broadcast", "inside discoveryStopped broadcast");
+					whenStoppedDiscovery();
 		            
 				}
 		           
@@ -102,12 +134,11 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 			
 			IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);		 
 		    registerReceiver(myReciever, filter);
+		    IntentFilter filter2 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);		 
+		    registerReceiver(discoveryStopped, filter2);
 			
-		   if(blueAdapter.startDiscovery()){
-			   while(!blueAdapter.isDiscovering()){
-				   Log.i("test", "whatever " + blueAdapter.isDiscovering());
-			   }
-			}
+		    blueAdapter.startDiscovery();
+		
 			//set discoverable name to fugitive_"MAC_ADDRESS"
 			
 			myBlue_Mac = blueAdapter.getAddress();
@@ -156,19 +187,21 @@ public class MainActivity extends Activity implements SeekBar.OnSeekBarChangeLis
 	protected void onStart(){
 		super.onStart();
 		
-		//BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
-		while(true){
-			if(!blueAdapter.isDiscovering()){
-				Log.i("test", "discoverable?" + blueAdapter.isDiscovering());
-				Thread BlueServer = new Thread(new BlueServerSock(blueAdapter));
-		 		BlueServer.start();
-		 		Thread BlueClient = new Thread(new BlueClientSocket(blueAdapter));
-		 		BlueClient.start();
-		 		break;
-			}
-		}
      }
 	
+
+	public void whenStoppedDiscovery(){
+
+
+		Thread BlueServer = new Thread(new BlueServerSock(blueAdapter));
+ 		BlueServer.start();
+ 		Thread BlueClient = new Thread(new BlueClientSocket(blueAdapter));
+ 		BlueClient.start();
+
+		for(int i = 0; i < 3; i++){
+			textview2.append(blueFound[i] + "\n");
+		}
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
