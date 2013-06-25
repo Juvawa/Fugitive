@@ -1,5 +1,6 @@
 package org.opencv.samples.colorblobdetect;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,8 +29,14 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.View.OnTouchListener;
+import android.widget.TextView;
+import mbed.adkPort.AdkPort;
 
 public class ColorBlobDetectionActivity extends Activity implements OnTouchListener, CvCameraViewListener2 {
+	//Mbed
+	AdkPort mbed;						// Instance of the ADK Port class
+	boolean mbed_attached = false;
+	   
     private static final String  TAG              = "OCVSample::Activity";
 
     private boolean              mIsColorSelected = false;
@@ -41,6 +48,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
     private Size                 SPECTRUM_SIZE;
     private Scalar               CONTOUR_COLOR;
     List<Point> 				 foo;
+    private int					 dir;
     int maxX, maxY, minX, minY;
     Display display;
     int width;
@@ -90,11 +98,33 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         minY = mOpenCvCameraView.getHeight();
         maxX = 0;
         maxY = 0; 
+        // Initialises the instance of ADKPort with the context
+        
+        
+        
+        try {
+           mbed = new AdkPort(this);
+        } catch (IOException e) {
+           return;
+        }
+        // Attaches a function which is called on new, as a MessageNotifier interface, onNew called when new bytes are recived
+        mbed.attachOnNew(new AdkPort.MessageNotifier(){ 
+           @Override
+           public void onNew()
+           {
+              //byte[] in = mbed.readB();
+           }
+        });
+        Thread thread = new Thread(mbed);			// Set up an instance of the mbed thread
+        thread.start();								// start it
+        //mbed.sendString("GO");						// Tell it to send "go" to the mbed, so the mbed starts sending pot values
     }
 
     @Override
     public void onPause()
     {
+        if (mbed != null)
+            mbed.closeAccessory();
         super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
@@ -103,11 +133,15 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
     @Override
     public void onResume()
     {
+        if (mbed != null)
+            mbed.openAccessory();
         super.onResume();
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
     }
 
     public void onDestroy() {
+        if (mbed != null)
+        mbed.onDestroy(this);
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
@@ -122,7 +156,8 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         SPECTRUM_SIZE = new Size(200, 64);
         CONTOUR_COLOR = new Scalar(255,0,0,255);
         
-        mBlobColorHsv = new Scalar(6, 222, 106);
+        //mBlobColorHsv = new Scalar(6, 222, 106); //Red
+        mBlobColorHsv = new Scalar(77, 148, 119); //Green
         mDetector.setHsvColor(mBlobColorHsv);
 
         mIsColorSelected = true;
@@ -201,12 +236,32 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
             		//Log.i("POINTS", "WIDTH "+width+" HEIGHT "+height);
             		Log.i("POINTS", "maxX "+maxX + " maxY "+maxY+ " minX " +minX + " minY "+minY);	
             	}
-            	if(minX > (width/3) && maxX < (width/3*2))// && minY > (height/3) && maxY < (height/3*2))
-            		med.sendString("MF");
-            	else if(minX > (width/3*2) && maxX < width)// && minY > (height/3) && maxY < (height/3*2))
-            		mbed.sendString("MR");
-            	else if(minX > 0 && maxX < (width/3))// && minY > (height/3) && maxY < (height/3*2))
-            		mbed.sendString("ML");
+            	// && minY > (height/3) && maxY < (height/3*2))
+            	// && minY > (height/3) && maxY < (height/3*2))
+            	// && minY > (height/3) && maxY < (height/3*2))
+            	int result = (minX+maxX)/2;
+            	if(result >= (width/3) && result < (width/3*2)) {
+            		if(dir != 1) {
+            		   mbed.sendString("MF");
+            		}
+            		dir = 1;
+            	}
+            	else if(result >= (width/3*2) && result < width) {
+            		if(dir != 2) {
+             		   mbed.sendString("MR");
+             		}
+             		dir = 2;
+            	}
+            	else if(result >= 0 && result < (width/3)) {
+            		if(dir != 3) {
+             		   mbed.sendString("ML");
+             		}
+             		dir = 3;
+            	}
+            	else {
+            		mbed.sendString("MS");
+            		dir = 0;
+            	}
                 minX = mOpenCvCameraView.getWidth();
                 minY = mOpenCvCameraView.getHeight();
                 maxX = 0;
@@ -237,4 +292,13 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
 		// TODO Auto-generated method stub
 		return false;
 	}
+	
+	   private int bytetoint(byte b) {				// Deals with the twos complement problem that bit packing presents
+		      int t = ((Byte)b).intValue();
+		      if(t < 0)
+		      {
+		         t += 256;
+		      }
+		      return t;
+		   }
 }
