@@ -121,10 +121,10 @@ void AdkTerm::resetDevice()
 
 int AdkTerm::callbackRead(u8 *buf, int len)
 {
-    pc.printf("%i  %s\n\r\n\n\n",len,buf);
-    led1 = 1;
+    //pc.printf("%i  %s\n\r\n\n\n",len,buf);
+    //led1 = 1;
     if(len==32) {
-         led2 = 1;
+         //led2 = 1;
          myDrive.order(buf);
     }
     for (int i = 0; i<INBL; i++) {

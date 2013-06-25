@@ -41,20 +41,32 @@ void DriveControl::stop() {
    wheel3->pulsewidth(0.0);
 }
 
+void DriveControl::driveWheels(float a, float b, float c) {
+   wheel1->pulsewidth(a);
+   wheel2->pulsewidth(b);
+   wheel3->pulsewidth(c);
+   
+}
+
 void DriveControl::order(u8 *code) {
       if(!strcmp((char*)code,"MF")) {
          forward();
+         //driveWheels(0.01,0.0005,0.0000);
       }
       else if(!strcmp((char*)code,"MB")) {
          backward();
+         //driveWheels(0.0005,0.01,0.0000);
       }
       else if(!strcmp((char*)code,"ML")) {
          turnleft();
+         //driveWheels(0.0005,0.0005,0.0005);
       }
       else if(!strcmp((char*)code,"MR")) {
          turnright();
+         //driveWheels(0.01,0.01,0.01);
       }
       else if(!strcmp((char*)code,"MS")) {
          stop();
+         //driveWheels(0.0,0.0,0.0);
       }
 }

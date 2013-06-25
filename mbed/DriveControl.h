@@ -12,6 +12,7 @@ class DriveControl {
       void turnleft();
       void turnright();
       void stop();
+      void driveWheels(float a,float b,float c);
       void order(u8 *code);
       
       DriveControl(PwmOut &wheel1,PwmOut &wheel2,PwmOut &wheel3);

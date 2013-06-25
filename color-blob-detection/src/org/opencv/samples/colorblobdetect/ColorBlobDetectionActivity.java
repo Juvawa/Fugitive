@@ -49,6 +49,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
     private Scalar               CONTOUR_COLOR;
     List<Point> 				 foo;
     private int					 dir;
+    private int 				 result;
     int maxX, maxY, minX, minY;
     Display display;
     int width;
@@ -218,11 +219,10 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
-
+        result = 0;
         if (mIsColorSelected) {
             mDetector.process(mRgba);
             List<MatOfPoint> contours = mDetector.getContours();
-            int result = 0;
             if(contours.size() > 0) {
             	foo = contours.get(0).toList();
             	for(Point p : foo){
