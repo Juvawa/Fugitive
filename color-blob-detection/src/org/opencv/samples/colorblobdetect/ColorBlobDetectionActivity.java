@@ -222,6 +222,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         if (mIsColorSelected) {
             mDetector.process(mRgba);
             List<MatOfPoint> contours = mDetector.getContours();
+            int result = 0;
             if(contours.size() > 0) {
             	foo = contours.get(0).toList();
             	for(Point p : foo){
@@ -239,7 +240,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
             	// && minY > (height/3) && maxY < (height/3*2))
             	// && minY > (height/3) && maxY < (height/3*2))
             	// && minY > (height/3) && maxY < (height/3*2))
-            	int result = (minX+maxX)/2;
+            	result = (minX+maxX)/2;
             	if(result >= (width/3) && result < (width/3*2)) {
             		if(dir != 1) {
             		   mbed.sendString("MF");
