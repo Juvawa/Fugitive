@@ -12,27 +12,26 @@ import android.bluetooth.BluetoothSocket;
 import android.util.Log;
 
 public class BlueClientSocket implements Runnable{
-	String myBlue = MainActivity.myBlue_Name;
-	String nmyBlue = MainActivity.nmyBlue_Name;
-	String myBlue_Mac = MainActivity.myBlue_Mac;
-	String nmyBlue_Mac = MainActivity.nmyBlue_Mac;
+	String blueMac = "";
 	BluetoothDevice remDevice;
 	BluetoothSocket tmp = null;
 		
-	static BluetoothAdapter blueAdapter = null;
+	BluetoothAdapter blueAdapter = null;
 	static BluetoothServerSocket blueServer;
 	static BluetoothSocket blueClient = null, blueClientS = null;
 	
 	static InputStream input;
 	static OutputStream output;
 	
-	public BlueClientSocket(BluetoothAdapter blueAdapter){
-		this.blueAdapter = BluetoothAdapter.getDefaultAdapter();	
+	public BlueClientSocket(BluetoothAdapter blueAdapter, String blueMac){
+		this.blueAdapter = BluetoothAdapter.getDefaultAdapter();
+		this.blueMac = blueMac;
+		
 	}
 	@Override
 	public void run() {
 		blueAdapter.cancelDiscovery();
-		remDevice = blueAdapter.getRemoteDevice(nmyBlue_Mac);
+		remDevice = blueAdapter.getRemoteDevice(blueMac);
 		try {
 			Log.i("pairing", "aan het pairen");
 			tmp = remDevice.createRfcommSocketToServiceRecord(MainActivity.myUUID);

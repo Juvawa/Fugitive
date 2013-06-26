@@ -29,40 +29,40 @@ public class BlueServerSock implements Runnable{
 	
 	@Override
 	public void run() {
-		
-		try {
-			tmp = blueAdapter.listenUsingRfcommWithServiceRecord(MainActivity.serviceName, MainActivity.myUUID);
-		} catch (IOException e) {
-			Log.i("BlueLog", "BlueServer did NOT initialise...");
-			e.printStackTrace();
-		} catch (Exception e){
-			e.printStackTrace();
-		}
-		blueServer = tmp;
-		Log.i("BlueLog", "BlueServer is initialised...");
-		
 		while(true){
-			Log.i("BlueLog", "BlueServer is listening...");
 			try {
-				blueClientS = blueServer.accept();
+				tmp = blueAdapter.listenUsingRfcommWithServiceRecord(MainActivity.serviceName, MainActivity.myUUID);
 			} catch (IOException e) {
-				Log.i("BlueLog", "BlueServer is NOT listening...");
+				Log.i("BlueLog", "BlueServer did NOT initialise...");
+				e.printStackTrace();
+			} catch (Exception e){
 				e.printStackTrace();
 			}
-			//Socket accepted
-			if(blueClientS != null){
+			blueServer = tmp;
+			Log.i("BlueLog", "BlueServer is initialised...");
+			
+			while(true){
+				Log.i("BlueLog", "BlueServer is listening...");
 				try {
-					manageBlueServer();
-					blueServer.close();
-					break;
+					blueClientS = blueServer.accept();
 				} catch (IOException e) {
-					Log.i("BlueLog", "BlueServer did not close...");
+					Log.i("BlueLog", "BlueServer is NOT listening...");
 					e.printStackTrace();
 				}
-				Log.i("BlueLog", "BlueServer has closed...");
+				//Socket accepted
+				if(blueClientS != null){
+					try {
+						manageBlueServer();
+						blueServer.close();
+						break;
+					} catch (IOException e) {
+						Log.i("BlueLog", "BlueServer did not close...");
+						e.printStackTrace();
+					}
+					Log.i("BlueLog", "BlueServer has closed...");
+				}
 			}
 		}
-		
 		
 	}
 
