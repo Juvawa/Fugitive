@@ -100,9 +100,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         maxX = 0;
         maxY = 0; 
         // Initialises the instance of ADKPort with the context
-        
-        
-        
+
         try {
            mbed = new AdkPort(this);
         } catch (IOException e) {
@@ -235,7 +233,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
             		if(maxY < p.y)
             			maxY = (int)p.y;
             		//Log.i("POINTS", "WIDTH "+width+" HEIGHT "+height);
-            		Log.i("POINTS", "maxX "+maxX + " maxY "+maxY+ " minX " +minX + " minY "+minY);	
+            		//Log.i("POINTS", "maxX "+maxX + " maxY "+maxY+ " minX " +minX + " minY "+minY);	
             	}
             	// && minY > (height/3) && maxY < (height/3*2))
             	// && minY > (height/3) && maxY < (height/3*2))
@@ -243,33 +241,41 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
             	result = (minX+maxX)/2;
             	if(result >= (width/3) && result < (width/3*2)) {
             		if(dir != 1) {
-            		   mbed.sendString("MF");
+            			mbed.sendString("MF");
+            			Log.i("MOVING", "Moving forward...");            		
             		}
             		dir = 1;
             	}
             	else if(result >= (width/3*2) && result < width) {
             		if(dir != 2) {
-             		   mbed.sendString("MR");
-             		}
+            			mbed.sendString("MR");
+            			Log.i("MOVING", "Moving right...");            		
+            		}
              		dir = 2;
             	}
             	else if(result >= 0 && result < (width/3)) {
             		if(dir != 3) {
-             		   mbed.sendString("ML");
-             		}
+            			mbed.sendString("ML");
+            			Log.i("MOVING", "Moving left...");            		
+            		}
              		dir = 3;
             	}
             	else {
-            		mbed.sendString("MS");
-            		dir = 0;
+            		if(dir != 0) {
+            			mbed.sendString("MS");
+            			Log.i("MOVING", "Stopping...");            		
+            		}            		
+        			dir = 0;
             	}
                 minX = mOpenCvCameraView.getWidth();
                 minY = mOpenCvCameraView.getHeight();
                 maxX = 0;
                 maxY = 0; 
             } else {
-            	if(dir != 0)
-            	   mbed.sendString("MS");
+            	if(dir != 0) {
+            		mbed.sendString("MS");
+            		Log.i("MOVING", "Stopping...");
+            	}
             	dir = 0;
             }
             Imgproc.drawContours(mRgba, contours, -1, CONTOUR_COLOR);

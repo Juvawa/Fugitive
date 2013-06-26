@@ -76,6 +76,7 @@ public class AdkPort implements Runnable{
 	
 	// Has the accessory been opened? find out with this variable
 	private boolean isOpen = false;
+	private boolean haveAccessory = false;
 
 	// A receiver for events on the UsbManager, when permission is given or when the cable is pulled
 	BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
@@ -264,14 +265,18 @@ public class AdkPort implements Runnable{
 	
 	// Attaches the file streams to their pointers
 	private void openAccessory(UsbAccessory accessory) {
-		mAccessory = accessory;
-		mFileDescriptor = mManager.openAccessory(accessory);
-		if (mFileDescriptor != null) {
-			FileDescriptor fd = mFileDescriptor.getFileDescriptor();
-			mInputStream = new FileInputStream(fd);
-			mOutputStream = new FileOutputStream(fd);
-		} 
-		isOpen = true;
+		if(haveAccessory == false){
+			mAccessory = accessory;
+			mFileDescriptor = mManager.openAccessory(accessory);
+			if (mFileDescriptor != null) {
+				FileDescriptor fd = mFileDescriptor.getFileDescriptor();
+				mInputStream = new FileInputStream(fd);
+				if(mOutputStream == null)
+					mOutputStream = new FileOutputStream(fd);
+			} 
+			isOpen = true;
+			haveAccessory = true;
+		}
 	}
 	
 	public void closeAccessory() {
@@ -324,8 +329,9 @@ public class AdkPort implements Runnable{
 					mOutputStream.write(newbuf);
 					mOutputStream.flush();
 					}
-				} catch (IOException e) {
-					//writeToConsole("Failed to send\n\r");
+				} catch (Exception e) {
+					e.printStackTrace();
+					Log.i("ERROR", "Failed to send\n\r");
 				}
 			}
 			i = i + 32;
