@@ -9,11 +9,6 @@ PwmOut wheel1(p23);
 PwmOut wheel2(p24);
 PwmOut wheel3(p25);
 DriveControl myDrive(wheel1,wheel2,wheel3);
-//AnalogOut blue_top(p27);
-//AnalogOut blue_shared(p28);
-//AnalogOut red_corner(p18);
-//AnalogOut green_corner(p15);
-
 
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
@@ -23,6 +18,8 @@ AnalogIn Right(p19);
 AnalogIn Left(p20);
     
 DigitalOut ind(p21);
+DigitalOut blinkL(p18);
+DigitalOut blinkR(p15);
 
 #define OUTL 100
 #define INBL 100
@@ -82,32 +79,7 @@ void AdkTerm::AttachTick()
 
 void AdkTerm::onTick()
 {
-    right = 1-Right;
-    left = 1-Left;
-    bool update = false;
-    int templ, tempr;
-    
-    templ = int(left * 10000);
-    tempr = int(right * 10000);
 
-    if (abs(templ-tl)>170) {
-        update = true;
-    }
-    if (abs(tempr-tr)>170) {
-        update = true;
-    }
-    if (update) {
-        u8* wbuf = _writebuff;
-
-        wbuf[0] = 'P';
-        wbuf[1] =  templ&0xFF;
-        wbuf[2] = (templ>>8) & 0xFF;
-        wbuf[3] =  tempr&0xFF;
-        wbuf[4] = (tempr>>8) & 0xFF;
-        wbuf[5] = 0;
-
-        this->write(wbuf,5);
-    }
 }
 
 void AdkTerm::resetDevice()
@@ -139,7 +111,7 @@ int AdkTerm::callbackRead(u8 *buf, int len)
 int AdkTerm::callbackWrite()
 {
 
-    ind = false;
+    //ind = false;
     return 0;
 }
 
@@ -157,7 +129,7 @@ void AdkTerm::serialIRQ()
             buffer[i] = 0;
         }
         pc.printf("Sending: %s\n\r",wbuf);
-        ind = true;
+        //ind = true;
         this->write(wbuf,bcount);
         bcount = 0;
     } else {
@@ -181,11 +153,8 @@ int main()
     AdkTerm.setupDevice();
     printf("Android Development Kit: start\r\n");
     USBInit();
-    
+   
     while (1) {
-    /* Alter RGB LED Light with Potmeters */
-    //red_top = Left;
-    //blue_top = Right;
         USBLoop();
     }
 }

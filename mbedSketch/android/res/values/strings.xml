@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, MbedADKSketchActivity!</string>
+    <string name="app_name">MbedADKSketch</string>
+    <string name="forward">F</string>
+    <string name="backward">B</string>
+    <string name="left">L</string>
+    <string name="right">R</string>
+    <string name="stop">S</string>
+    <string name="forlef">FL</string>
+    <string name="forrig">FR</string>
+    <string name="baklef">BL</string>
+    <string name="bakrig">BR</string>
+</resources>

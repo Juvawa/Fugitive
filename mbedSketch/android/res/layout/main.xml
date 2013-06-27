@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+   xmlns:android="http://schemas.android.com/apk/res/android"
+   android:layout_width="match_parent"
+   android:layout_height="match_parent">
+
+     <Button
+     android:layout_height="wrap_content"
+     android:layout_width="wrap_content"
+     android:text="@string/forlef"
+     android:id="@+id/forlef"
+     android:layout_toLeftOf="@+id/forw"/>
+     <Button
+     android:layout_height="wrap_content"
+     android:layout_width="wrap_content"
+     android:text="@string/forrig"
+     android:id="@+id/forrig"
+     android:layout_toRightOf="@+id/forw"/>
+
+          <Button
+              android:id="@+id/forw"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_centerHorizontal="true"
+              android:text="@string/forward" />
+
+          <Button
+              android:id="@+id/sto"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_below="@+id/forrig"
+              android:layout_toLeftOf="@+id/forrig"
+              android:text="@string/stop" />
+
+          <Button
+              android:id="@+id/lef"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_below="@+id/forlef"
+              android:layout_toLeftOf="@+id/forw"
+              android:text="@string/left" />
+
+          <Button
+              android:id="@+id/rig"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_alignBaseline="@+id/sto"
+              android:layout_alignBottom="@+id/sto"
+              android:layout_alignLeft="@+id/forrig"
+              android:text="@string/right" />
+
+          <Button
+              android:id="@+id/bak"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_below="@+id/sto"
+              android:layout_toRightOf="@+id/lef"
+              android:text="@string/backward" />
+
+          <Button
+              android:id="@+id/baklef"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_alignBaseline="@+id/bak"
+              android:layout_alignBottom="@+id/bak"
+              android:layout_alignLeft="@+id/lef"
+              android:text="@string/baklef" />
+
+          <Button
+              android:id="@+id/bakrig"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_alignBaseline="@+id/bak"
+              android:layout_alignBottom="@+id/bak"
+              android:layout_toRightOf="@+id/bak"
+              android:text="@string/bakrig" />
+
+</RelativeLayout>
